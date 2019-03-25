@@ -3,7 +3,6 @@ package main
 import (
   "net/http"
   "net/url"
-  "fmt"
   "strings"
   "os"
   "encoding/json"
@@ -35,7 +34,6 @@ type Dog struct {
 }
 
 func main() {
-  fmt.Printf("start\n")
   title, first, last := getName()
   pic := getADog()
   msg := "Hello Jamie, this is Jarvis Adam's, personal assistant. "
@@ -72,21 +70,12 @@ func sendText(args ...string) {
   req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
   // Make request
-  resp, err := client.Do(req)
-  if err != nil {
-    fmt.Printf("fail")
-  } else {
-    fmt.Printf(resp.Status)
-  }
+  client.Do(req)
 }
 
 func getADog() string {
   resp, err := http.Get("https://dog.ceo/api/breeds/image/random")
-  if err != nil {
-    fmt.Printf("fail")
-  } else {
-    fmt.Printf(resp.Status)
-
+  if err == nil {
     defer resp.Body.Close()
     dog := Response{}
     json.NewDecoder(resp.Body).Decode(&dog)
