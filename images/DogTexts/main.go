@@ -3,6 +3,7 @@ package main
 import (
   "net/http"
   "net/url"
+  "fmt"
   "strings"
   "os"
   "encoding/json"
@@ -34,6 +35,7 @@ type Dog struct {
 }
 
 func main() {
+  fmt.Printf("start\n")
   title, first, last := getName()
   pic := getADog()
   msg := "Hello Jamie, this is Jarvis Adam's, personal assistant. "
@@ -47,8 +49,14 @@ func sendText(args ...string) {
   msg := args[0]
   accountSid := "AC19dd69d986658313d0c871bdbf0c37de"
   authToken := os.Getenv("TWILIO")
+  fmt.Printf("auth: \n")
+  fmt.Printf(authToken)
   to := os.Getenv("TO_NUMBER")
+  fmt.Printf("to: \n")
+  fmt.Printf(to)
   from := os.Getenv("TWILIO_NUMBER")
+  fmt.Printf("from: \n")
+  fmt.Printf(from)
   urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json"
 
   // Build out the data for our message
@@ -69,13 +77,23 @@ func sendText(args ...string) {
   req.Header.Add("Accept", "application/json")
   req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+  fmt.Printf("response:\n")
   // Make request
-  client.Do(req)
+  resp, err := client.Do(req)
+  if err != nil {
+    fmt.Printf("fail")
+  } else {
+    fmt.Printf(resp.Status)
+  }
 }
 
 func getADog() string {
   resp, err := http.Get("https://dog.ceo/api/breeds/image/random")
-  if err == nil {
+  if err != nil {
+    fmt.Printf("fail")
+  } else {
+    fmt.Printf(resp.Status)
+
     defer resp.Body.Close()
     dog := Response{}
     json.NewDecoder(resp.Body).Decode(&dog)
