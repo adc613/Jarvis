@@ -1,6 +1,9 @@
 package main
 
 import (
+  "bytes"
+  "text/template"
+  "flag"
   "net/http"
   "net/url"
   "fmt"
@@ -35,37 +38,61 @@ type Dog struct {
 }
 
 func main() {
-  fmt.Printf("start\n")
-  title, first, last := getName()
-  pic := getADog()
-  msg := "Hello Jamie, this is Jarvis Adam's, personal assistant. "
-  msg += "Adam says goodnight and here's picture of " + title + ". " + first + " " + last
-  msg += ". Sweet dreams!"
-  sendText(msg, pic)
+  fmt.Println("start")
 
+  title, first, last := getName()
+  name := Name{First:first, Last:last, Title:title}
+
+  dMsg := "Hello Jamie, this is Jarvis Adam's, personal assistant. "
+  dMsg += "Adam says goodnight and here's picture of " + title + ". " + first + " " + last
+  dMsg += ". Sweet dreams!"
+
+  msg := flag.String("m", dMsg, "The text message being sent to the user")
+  tmplMsg := flag.String("template", "", "The text message being sent to the user")
+  debug := flag.Bool("debug", false, "Doesn't send the message")
+  to := flag.String("to", "+18475626149", "Doesn't send the message")
+  noPic := flag.Bool("no-pic", false, "Don't add a pic")
+
+  flag.Parse()
+
+  pic := ""
+  if !*noPic {
+    pic =  getADog()
+  }
+
+  sendText(*msg, *tmplMsg, name, pic, *to, *debug)
 }
 
-func sendText(args ...string) {
-  msg := args[0]
+func sendText(msg string, tmplMsg string, name Name, pic string, to string, debug bool) {
   accountSid := "AC19dd69d986658313d0c871bdbf0c37de"
   authToken := os.Getenv("TWILIO")
-  fmt.Printf("auth: \n")
-  fmt.Printf(authToken)
-  to := os.Getenv("TO_NUMBER")
-  fmt.Printf("to: \n")
-  fmt.Printf(to)
   from := os.Getenv("TWILIO_NUMBER")
-  fmt.Printf("from: \n")
-  fmt.Printf(from)
+
+  fmt.Println("auth: ", authToken)
+  fmt.Println("to: ", to)
+  fmt.Println("from: ", from)
+  fmt.Println("pic: ", pic)
+
   urlStr := "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json"
+  sendMsg := msg
+  if tmplMsg != "" {
+    tmpl, err := template.New("message").Parse(tmplMsg)
+    if err == nil {
+      var tpl bytes.Buffer
+      err = tmpl.Execute(&tpl, name)
+      if err == nil {
+        sendMsg = tpl.String()
+      }
+    }
+  }
 
   // Build out the data for our message
   v := url.Values{}
   v.Set("To", to)
   v.Set("From", from)
-  v.Set("Body", msg)
-  if(len(args) > 1) {
-    v.Set("MediaUrl", args[1])
+  v.Set("Body", sendMsg)
+  if pic != "" {
+    v.Set("MediaUrl", pic)
   }
   rb := *strings.NewReader(v.Encode())
 
@@ -79,11 +106,18 @@ func sendText(args ...string) {
 
   fmt.Printf("response:\n")
   // Make request
-  resp, err := client.Do(req)
-  if err != nil {
-    fmt.Printf("fail")
+
+
+  if !debug {
+    resp, err := client.Do(req)
+    if err != nil {
+      fmt.Printf("fail")
+    } else {
+      fmt.Printf(resp.Status)
+    }
   } else {
-    fmt.Printf(resp.Status)
+    fmt.Printf("\nMessage: \n\n")
+    fmt.Printf(sendMsg)
   }
 }
 
