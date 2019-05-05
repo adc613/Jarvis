@@ -15,8 +15,3 @@ import "phoenix_html"
 //
 // Local files can be imported directly using relative paths, for example:
 // import socket from "./socket"
-
-const doorbell = document.getElementById('doorbell');
-doorbell.addEventListener('click', (event) => {
-  console.log('click');
-});
