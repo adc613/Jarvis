@@ -1,9 +1,5 @@
-defmodule ConsoleWeb.HomeController do
+defmodule ConsoleWeb.DoorbellController do
   use ConsoleWeb, :controller
-
-  def index(conn, _params) do
-    render(conn, "index.html")
-  end
 
   def doorbell(conn, _params) do 
     conn

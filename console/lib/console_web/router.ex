@@ -16,12 +16,12 @@ defmodule ConsoleWeb.Router do
   scope "/", ConsoleWeb do
     pipe_through :browser
 
-    get "/", HomeController, :index
+    get "/", DashboardController, :index
   end
 
   scope "/api", ConsoleWeb do
     pipe_through :api
 
-    get "/doorbell", HomeController, :doorbell
+    get "/doorbell", DoorbellController, :doorbell
   end
 end
