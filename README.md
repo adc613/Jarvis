@@ -9,7 +9,7 @@ docker run --rm --name pg-docker -e POSTGRES_PASSWORD=docker -d -p 5432:5432 -v 
 
 # Running dev server
 
-## Prereqs
+## Pre-reqs
 
 1) Install everything. I don't have instructors for that. You'll need elixir/pheonix
    and docker.
@@ -18,4 +18,13 @@ docker run --rm --name pg-docker -e POSTGRES_PASSWORD=docker -d -p 5432:5432 -v 
 
 ```
 mix phx.server
+```
+
+# Adding dependencies
+
+
+Add dependencies to [mix.exs](console/mix.exs)
+
+```
+mix deps.get
 ```
