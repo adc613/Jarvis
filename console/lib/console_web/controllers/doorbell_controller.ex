@@ -1,36 +1,52 @@
 defmodule ConsoleWeb.DoorbellController do
+  defmodule LightState do
+    @type t :: %LightState{
+      on: boolean,
+      sat: integer,
+      bri: integer,
+      hue: integer,
+    }
+
+    defstruct [:on, :sat, :bri, :hue]
+  end
+
+
   use ConsoleWeb, :controller
 
   def test(conn, _params) do 
-    case set_light_state(false) do
-      :ok ->
-        get_light_state()
-        |> test_render(conn)
-      :error ->
-        test_render(:error, conn)
-    end
+    get_light_state() |> render_state(conn)
   end
 
   def ring_doorbell(conn, _params) do 
-    case set_light_state(false) do
+    case ring(conn, :s0) do
       :ok ->
-        ring(conn, :stage1)
+        ring(conn, :s1)
       :error ->
         ring(conn, :error)
     end
   end
 
-  defp ring(conn, :stage1) do
+  defp ring(conn, :s0) do
     Process.sleep(1000)
     case set_light_state(true) do
       :ok ->
-        ring(conn, :stage2)
+        ring(conn, :s2)
       :error ->
         ring(conn, :error)
     end
   end
 
-  defp ring(conn, :stage2) do
+  defp ring(conn, :s1) do
+    Process.sleep(1000)
+    case set_light_state(true) do
+      :ok ->
+        ring(conn, :s2)
+      :error ->
+        ring(conn, :error)
+    end
+  end
+
+  defp ring(conn, :s2) do
     get_light_state()
     |> test_render(conn)
   end
@@ -48,9 +64,7 @@ defmodule ConsoleWeb.DoorbellController do
   defp get_light_state() do
     case HTTPoison.get "192.168.70.116/api/wLGFA5G9qHCmuthlGDMFQHZcEqR11TtfeVGOWtjU/lights/7" do
       {:ok, %HTTPoison.Response{body: body}} ->
-        body
-        |> Poison.decode!
-        |> (&(&1["state"]["on"])).()
+        body |> Poison.decode! |> decode_light_state
       {:error} ->
         :error
     end
@@ -101,5 +115,17 @@ defmodule ConsoleWeb.DoorbellController do
   defp test_render(_uknown, conn) do
     conn
     |> render(ConsoleWeb.DoorbellView, "test.json", state: :uknown)
+  end
+
+  defp render_state(light_state, conn) do
+    conn |> render(ConsoleWeb.DoorbellView, "test.json", light_state)
+  end
+
+  defp decode_light_state(body) do
+    on = body["state"]["on"]
+    sat = body["state"]["sat"]
+    bri = body["state"]["bri"]
+    hue = body["state"]["hue"]
+    %LightState{on: on, sat: sat, bri: bri, hue: hue}
   end
 end
