@@ -51,3 +51,7 @@ mix deps.get
   RPi
 * Learned about [asdf](https://github.com/asdf-vm/asdf) and decided to use it on
   the RPi and my workstation to manage elixir and erlang environments
+
+## Hue
+
+You need a username to make calls to the hue locally. [doc](https://developers.meethue.com/develop/get-started-2/)

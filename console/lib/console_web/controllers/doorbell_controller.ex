@@ -1,4 +1,12 @@
 defmodule ConsoleWeb.DoorbellController do
+
+  use ConsoleWeb, :controller
+  @hue_user "wLGFA5G9qHCmuthlGDMFQHZcEqR11TtfeVGOWtjU"
+  @enabled_lights [id: "7"]
+  @alert_hue 46920
+  @alert_time 2500
+
+
   defmodule LightState do
     @type t :: %LightState{
       on: boolean,
@@ -11,58 +19,36 @@ defmodule ConsoleWeb.DoorbellController do
   end
 
 
-  use ConsoleWeb, :controller
-
   def test(conn, _params) do 
-    get_light_state() |> render_state(conn)
+    initial_state = get_light_state("7") 
+
+    render_state(initial_state, conn)
   end
 
   def ring_doorbell(conn, _params) do 
-    case ring(conn, :s0) do
-      :ok ->
-        ring(conn, :s1)
-      :error ->
-        ring(conn, :error)
-    end
+    initial_state = get_light_state("7") 
+
+    init_values =
+      Keyword.get_values(@enabled_lights, :id)
+      |> Enum.map(fn id -> [id, get_light_state(id)] end)
+
+    init_values 
+    |> Enum.map(fn [id, state] -> [id, %{state | hue: @alert_hue}] end)
+    |> Enum.each(fn x -> set_light_state(x) end)
+
+    Process.sleep(@alert_time)
+
+    init_values
+    |> Enum.each(fn x -> set_light_state(x) end)
+
+    render_state(initial_state, conn)
   end
 
-  defp ring(conn, :s0) do
-    Process.sleep(1000)
-    case set_light_state(true) do
-      :ok ->
-        ring(conn, :s2)
-      :error ->
-        ring(conn, :error)
-    end
-  end
 
-  defp ring(conn, :s1) do
-    Process.sleep(1000)
-    case set_light_state(true) do
-      :ok ->
-        ring(conn, :s2)
-      :error ->
-        ring(conn, :error)
-    end
-  end
+  defp get_light_state(id) do
+    url = "192.168.70.116/api/" <> @hue_user <> "/lights/" <> id
 
-  defp ring(conn, :s2) do
-    get_light_state()
-    |> test_render(conn)
-  end
-
-  defp ring(conn, :error) do
-    test_render(:error, conn)
-  end
-
-  defp ring(conn, :ok) do
-    test_render(:error, conn)
-    get_light_state()
-    |> test_render(conn)
-  end
-
-  defp get_light_state() do
-    case HTTPoison.get "192.168.70.116/api/wLGFA5G9qHCmuthlGDMFQHZcEqR11TtfeVGOWtjU/lights/7" do
+    case HTTPoison.get url do
       {:ok, %HTTPoison.Response{body: body}} ->
         body |> Poison.decode! |> decode_light_state
       {:error} ->
@@ -70,11 +56,16 @@ defmodule ConsoleWeb.DoorbellController do
     end
   end
 
-  defp set_light_state(state) do
-    json = Poison.encode!(%{on: state})
-    case HTTPoison.put "192.168.70.116/api/wLGFA5G9qHCmuthlGDMFQHZcEqR11TtfeVGOWtjU/lights/7/state", json do
-      {:ok, %HTTPoison.Response{status_code: code, body: body}} ->
-        get_light_state()
+  defp set_light_state([id, state]) do
+    url =  "192.168.70.116/api/" <> @hue_user <> "/lights/" <>  id <> "/state"
+
+    response = 
+      state
+      |> Poison.encode!
+      |> (&(HTTPoison.put &2, &1)).(url)
+
+    case response do
+      {:ok, %HTTPoison.Response{status_code: 200, body: body}} ->
         body |> is_ok
       {:ok, %HTTPoison.Response{status_code: code, body: body}} ->
         :error
@@ -95,26 +86,6 @@ defmodule ConsoleWeb.DoorbellController do
       _ ->
         :error
     end
-  end
-
-  defp test_render(true, conn) do
-    conn
-    |> render(ConsoleWeb.DoorbellView, "test.json", state: :on)
-  end
-
-  defp test_render(false, conn) do
-    conn
-    |> render(ConsoleWeb.DoorbellView, "test.json", state: :off)
-  end
-
-  defp test_render(:error, conn) do
-    conn
-    |> render(ConsoleWeb.DoorbellView, "test.json", state: :error)
-  end
-
-  defp test_render(_uknown, conn) do
-    conn
-    |> render(ConsoleWeb.DoorbellView, "test.json", state: :uknown)
   end
 
   defp render_state(light_state, conn) do
