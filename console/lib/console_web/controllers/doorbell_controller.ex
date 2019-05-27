@@ -2,7 +2,8 @@ defmodule ConsoleWeb.DoorbellController do
 
   use ConsoleWeb, :controller
   @hue_user "wLGFA5G9qHCmuthlGDMFQHZcEqR11TtfeVGOWtjU"
-  @enabled_lights [id: "7"]
+  @enabled_lights [id: "7", id: "3"]
+  @force_enabled_lights [id: "8"]
   @alert_hue 46920
   @alert_time 2500
 
@@ -28,13 +29,21 @@ defmodule ConsoleWeb.DoorbellController do
   def ring_doorbell(conn, _params) do 
     initial_state = get_light_state("7") 
 
+    all_lights = @enabled_lights ++ @force_enabled_lights
+
     init_values =
-      Keyword.get_values(@enabled_lights, :id)
+      Keyword.get_values(all_lights, :id)
       |> Enum.map(fn id -> [id, get_light_state(id)] end)
 
-    init_values 
-    |> Enum.map(fn [id, state] -> [id, %{state | hue: @alert_hue}] end)
-    |> Enum.each(fn x -> set_light_state(x) end)
+    Keyword.get_values(@enabled_lights, :id)
+      |> Enum.map(fn id -> [id, get_light_state(id)] end)
+      |> Enum.map(fn [id, state] -> [id, %{state | hue: @alert_hue}] end)
+      |> Enum.each(fn x -> set_light_state(x) end)
+
+    Keyword.get_values(@force_enabled_lights, :id)
+      |> Enum.map(fn id -> [id, get_light_state(id)] end)
+      |> Enum.map(fn [id, state] -> [id, %{state | on: true, bri: 255, sat: 255, hue: @alert_hue}] end)
+      |> Enum.each(fn x -> set_light_state(x) end)
 
     Process.sleep(@alert_time)
 
